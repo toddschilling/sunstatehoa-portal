@@ -1,6 +1,6 @@
 // app/admin/documents/page.tsx
-import { loadTenantContext } from '@/lib/loadTenantContext';
-import DocumentUploader from '@/components/DocumentUploader';
+import { loadTenantContext } from "@/lib/loadTenantContext";
+import DocumentUploadPanel from "@/components/DocumentUploadPanel";
 
 export default async function AdminDocumentsPage() {
   const { tenant, user, role, error } = await loadTenantContext();
@@ -8,13 +8,12 @@ export default async function AdminDocumentsPage() {
   if (error || !tenant) {
     return (
       <main className="p-10 text-center text-red-600">
-        {error}
+        {error || "Unable to load tenant information."}
       </main>
     );
   }
 
-  // ⛔️ Check if user is an admin (example: based on Supabase role claim or tenant_membership table)
-  const isAdmin = role === 'admin'; // TODO: customize to your access model
+  const isAdmin = role === "admin";
 
   if (!isAdmin) {
     return (
@@ -26,8 +25,8 @@ export default async function AdminDocumentsPage() {
 
   return (
     <main className="p-10">
-      <h1 className="text-3xl font-semibold mb-6">Upload a New Document</h1>
-      <DocumentUploader tenantSlug={tenant.slug} />
+      <h1 className="text-3xl font-semibold mb-6">Manage Documents</h1>
+      <DocumentUploadPanel tenantSlug={tenant.slug} />
     </main>
   );
 }
