@@ -1,6 +1,7 @@
 // app/admin/documents/page.tsx
 import { loadTenantContext } from "@/lib/loadTenantContext";
 import DocumentUploadPanel from "@/components/DocumentUploadPanel";
+import DocumentStagingPanel from "@/components/DocumentStagingPanel";
 
 export default async function AdminDocumentsPage() {
   const { tenant, user, role, error } = await loadTenantContext();
@@ -26,7 +27,10 @@ export default async function AdminDocumentsPage() {
   return (
     <main className="p-10">
       <h1 className="text-3xl font-semibold mb-6">Manage Documents</h1>
+
       <DocumentUploadPanel tenantSlug={tenant.slug} />
+      <hr className="my-6" />
+      <DocumentStagingPanel tenantSlug={tenant.slug} />
     </main>
   );
 }

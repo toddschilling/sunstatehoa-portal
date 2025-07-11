@@ -3,7 +3,6 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { createClient } from "@/lib/supabase-browser";
-import { FileIcon } from "lucide-react";
 
 interface Props {
   tenantSlug: string;
@@ -12,32 +11,91 @@ interface Props {
 export default function DocumentUploadPanel({ tenantSlug }: Props) {
   const supabase = createClient();
   const [uploading, setUploading] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
-  const [messages, setMessages] = useState<string[]>([]);
+  const [completed, setCompleted] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [failed, setFailed] = useState<string[]>([]);
 
-  const handleUpload = async (selectedFiles: File[]) => {
+  const handleUpload = async (files: File[]) => {
     setUploading(true);
-    setMessages([]);
+    setCompleted(0);
+    setTotal(files.length);
+    setFailed([]);
 
-    for (const file of selectedFiles) {
-      const { error } = await supabase.storage
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user?.id) {
+      console.error("❌ No valid user session:", userError);
+      setFailed(files.map((f) => f.name));
+      setUploading(false);
+      return;
+    }
+
+    const { data: tenantData, error: tenantError } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("slug", tenantSlug)
+      .single();
+
+    if (tenantError || !tenantData?.id) {
+      console.error("❌ Tenant lookup failed:", tenantError);
+      setFailed(files.map((f) => f.name));
+      setUploading(false);
+      return;
+    }
+
+    const tenantId = tenantData.id;
+
+    for (const file of files) {
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
         .from(`${tenantSlug}-uploads`)
-        .upload(`${file.name}`, file, {
-          upsert: true,
-        });
+        .upload(file.name, file, { upsert: true });
 
-      setMessages((prev) => [
-        ...prev,
-        error ? `❌ Failed: ${file.name}` : `✅ Uploaded: ${file.name}`,
+      if (uploadError) {
+        console.error(
+          `❌ Upload failed for ${file.name}:`,
+          uploadError.message
+        );
+        setFailed((prev) => [...prev, `${file.name} (upload failed)`]);
+        continue;
+      }
+
+      // Insert metadata record
+      const { error: insertError } = await supabase.from("documents").insert([
+        {
+          tenant_id: tenantId,
+          title: file.name,
+          filename: file.name,
+          storage_path: file.name,
+          file_type: file.type,
+          uploaded_by: user.id,
+          is_public: false,
+          is_published: false,
+          doc_type: "other",
+        },
       ]);
+
+      if (insertError) {
+        console.error(
+          `❌ Metadata insert failed for ${file.name}:`,
+          insertError.message
+        );
+        setFailed((prev) => [...prev, `${file.name} (insert failed)`]);
+      }
+
+      setCompleted((prev) => prev + 1);
     }
 
     setUploading(false);
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles(acceptedFiles);
-    handleUpload(acceptedFiles);
+    if (acceptedFiles.length > 0) {
+      handleUpload(acceptedFiles);
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -45,48 +103,38 @@ export default function DocumentUploadPanel({ tenantSlug }: Props) {
     multiple: true,
   });
 
-  const handleManualUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files ? Array.from(e.target.files) : [];
-    setFiles(selected);
-    handleUpload(selected);
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div
         {...getRootProps()}
-        className={`p-8 border-2 border-dashed rounded-lg text-center transition ${
-          isDragActive ? "bg-blue-100 border-blue-400" : "bg-gray-50"
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition cursor-pointer ${
+          isDragActive ? "bg-blue-50 border-blue-400" : "bg-gray-50"
         }`}
       >
         <input {...getInputProps()} />
         <p className="text-gray-600">
-          Drag & drop documents here, or click to select files
+          Drag and drop files here or click to select
         </p>
       </div>
 
-      <div className="text-center">
-        <label className="cursor-pointer text-blue-600 underline">
-          Or choose files manually
-          <input
-            type="file"
-            multiple
-            onChange={handleManualUpload}
-            className="hidden"
-          />
-        </label>
-      </div>
-
-      {uploading && (
-        <p className="text-center text-sm text-gray-500">Uploading…</p>
+      {(uploading || completed > 0) && (
+        <div className="text-sm text-gray-700 text-center">
+          {uploading
+            ? `Uploading ${completed} of ${total} files...`
+            : `Uploaded ${completed} of ${total} files.`}
+        </div>
       )}
 
-      {messages.length > 0 && (
-        <ul className="text-sm space-y-1 text-center">
-          {messages.map((msg, idx) => (
-            <li key={idx}>{msg}</li>
-          ))}
-        </ul>
+      {failed.length > 0 && (
+        <div className="text-sm text-red-600 text-center">
+          ⚠️ {failed.length} failed
+          <span
+            title={failed.join("\n")}
+            className="ml-1 cursor-help underline decoration-dotted"
+          >
+            (view details)
+          </span>
+        </div>
       )}
     </div>
   );
