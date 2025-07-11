@@ -1,7 +1,7 @@
-import Link from 'next/link';
-import { loadTenantContext } from '@/lib/loadTenantContext';
-import { createClient } from '@/lib/supabase';
-import { DocumentRow } from '@/lib/types';
+import Link from "next/link";
+import { loadTenantContext } from "@/lib/loadTenantContext";
+import { createClient } from "@/lib/supabase";
+import { DocumentRow } from "@/lib/types";
 
 export default async function TenantLandingPage() {
   const { tenant, user, role, error } = await loadTenantContext();
@@ -9,7 +9,7 @@ export default async function TenantLandingPage() {
   if (error || !tenant) {
     return (
       <main className="p-10 text-center text-red-600">
-        {error || 'Unable to load tenant.'}
+        {error || "Unable to load tenant."}
       </main>
     );
   }
@@ -17,13 +17,14 @@ export default async function TenantLandingPage() {
   const supabase = createClient();
 
   const { data: documents } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('tenant_id', tenant.id)
-    .order('uploaded_at', { ascending: false });
+    .from("documents")
+    .select("*")
+    .eq("tenant_id", tenant.id)
+    .eq("is_published", true)
+    .order("uploaded_at", { ascending: false });
 
-  const publicDocs = documents?.filter(doc => doc.is_public) || [];
-  const privateDocs = documents?.filter(doc => !doc.is_public) || [];
+  const publicDocs = documents?.filter((doc) => doc.is_public) || [];
+  const privateDocs = documents?.filter((doc) => !doc.is_public) || [];
 
   const publicBucket = `${tenant.slug}-public`;
   const privateBucket = `${tenant.slug}-private`;
@@ -33,7 +34,7 @@ export default async function TenantLandingPage() {
     publicDocs.map(async (doc) => {
       const path = doc.storage_path;
 
-      console.log('🔍 Resolving public URL:', {
+      console.log("🔍 Resolving public URL:", {
         doc_id: doc.id,
         title: doc.title,
         bucket: publicBucket,
@@ -55,7 +56,7 @@ export default async function TenantLandingPage() {
         privateDocs.map(async (doc) => {
           const path = doc.storage_path;
 
-          console.log('🔐 Generating signed URL for private doc:', {
+          console.log("🔐 Generating signed URL for private doc:", {
             doc_id: doc.id,
             title: doc.title,
             bucket: privateBucket,
@@ -67,7 +68,10 @@ export default async function TenantLandingPage() {
             .createSignedUrl(path, 3600);
 
           if (error) {
-            console.error(`❌ Failed to sign private doc "${doc.title}"`, error.message);
+            console.error(
+              `❌ Failed to sign private doc "${doc.title}"`,
+              error.message
+            );
           }
 
           return {
@@ -95,10 +99,15 @@ export default async function TenantLandingPage() {
           ) : (
             <ul className="space-y-2">
               {publicWithUrls.map((doc) => (
-                <li key={doc.id} className="flex justify-between items-center border-b py-2">
+                <li
+                  key={doc.id}
+                  className="flex justify-between items-center border-b py-2"
+                >
                   <div>
                     <p className="font-medium text-gray-800">{doc.title}</p>
-                    <p className="text-sm text-gray-500 capitalize">{doc.doc_type}</p>
+                    <p className="text-sm text-gray-500 capitalize">
+                      {doc.doc_type}
+                    </p>
                   </div>
                   {doc.url ? (
                     <a
@@ -135,14 +144,21 @@ export default async function TenantLandingPage() {
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold">Private Documents</h2>
             {privateWithUrls.length === 0 ? (
-              <p className="text-gray-500">No private documents available yet.</p>
+              <p className="text-gray-500">
+                No private documents available yet.
+              </p>
             ) : (
               <ul className="space-y-2">
                 {privateWithUrls.map((doc) => (
-                  <li key={doc.id} className="flex justify-between items-center border-b py-2">
+                  <li
+                    key={doc.id}
+                    className="flex justify-between items-center border-b py-2"
+                  >
                     <div>
                       <p className="font-medium text-gray-800">{doc.title}</p>
-                      <p className="text-sm text-gray-500 capitalize">{doc.doc_type}</p>
+                      <p className="text-sm text-gray-500 capitalize">
+                        {doc.doc_type}
+                      </p>
                     </div>
                     {doc.url ? (
                       <a
@@ -164,9 +180,12 @@ export default async function TenantLandingPage() {
         )}
 
         {/* ---------- admin tools ---------- */}
-        {role === 'admin' && (
+        {role === "admin" && (
           <p className="text-sm">
-            <Link href="/admin/documents" className="text-blue-600 hover:underline">
+            <Link
+              href="/admin/documents"
+              className="text-blue-600 hover:underline"
+            >
               Manage Documents
             </Link>
           </p>
