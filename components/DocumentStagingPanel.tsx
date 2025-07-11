@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { FileText } from "lucide-react";
+import { FileText, Trash2, Archive } from "lucide-react";
 
 interface DocumentRow {
   id: string;
@@ -12,6 +12,7 @@ interface DocumentRow {
   uploaded_at: string;
   doc_type: string;
   tags: string[] | null;
+  is_archived: boolean;
 }
 
 interface Props {
@@ -30,9 +31,10 @@ export default function DocumentStagingPanel({ tenantSlug }: Props) {
       const { data, error } = await supabase
         .from("documents")
         .select(
-          "id, title, filename, storage_path, uploaded_at, doc_type, tags"
+          "id, title, filename, storage_path, uploaded_at, doc_type, tags, is_archived"
         )
         .eq("is_published", false)
+        .eq("is_archived", false)
         .order("uploaded_at", { ascending: false });
 
       if (error) {
@@ -54,11 +56,7 @@ export default function DocumentStagingPanel({ tenantSlug }: Props) {
     try {
       const res = await fetch("/api/analyze-document", {
         method: "POST",
-        body: JSON.stringify({
-          tenantSlug,
-          fileName,
-          documentId,
-        }),
+        body: JSON.stringify({ tenantSlug, fileName, documentId }),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -68,8 +66,6 @@ export default function DocumentStagingPanel({ tenantSlug }: Props) {
         console.error("❌ Analyze failed:", result.error);
         alert(`Error: ${result.error}`);
       } else {
-        console.log("✅ Metadata updated:", result.metadata);
-        // Optionally re-fetch the list
         const updatedDocs = documents.map((doc) =>
           doc.id === documentId
             ? {
@@ -88,6 +84,52 @@ export default function DocumentStagingPanel({ tenantSlug }: Props) {
     }
 
     setAnalyzingId(null);
+  };
+
+  const handleArchive = async (documentId: string) => {
+    const { error } = await supabase
+      .from("documents")
+      .update({ is_archived: true })
+      .eq("id", documentId);
+
+    if (error) {
+      console.error("❌ Failed to archive document:", error.message);
+      alert("Failed to archive document.");
+      return;
+    }
+
+    setDocuments((docs) => docs.filter((doc) => doc.id !== documentId));
+  };
+
+  const handleDelete = async (documentId: string, storagePath: string) => {
+    if (!confirm("Are you sure you want to permanently delete this document?"))
+      return;
+
+    const { error: storageError } = await supabase.storage
+      .from(`${tenantSlug}-uploads`)
+      .remove([storagePath]);
+
+    if (storageError) {
+      console.error(
+        "❌ Failed to delete file from storage:",
+        storageError.message
+      );
+      alert("Failed to delete file from storage.");
+      return;
+    }
+
+    const { error: dbError } = await supabase
+      .from("documents")
+      .delete()
+      .eq("id", documentId);
+
+    if (dbError) {
+      console.error("❌ Failed to delete metadata row:", dbError.message);
+      alert("Deleted file but failed to delete metadata row.");
+      return;
+    }
+
+    setDocuments((docs) => docs.filter((doc) => doc.id !== documentId));
   };
 
   if (loading) {
@@ -140,7 +182,19 @@ export default function DocumentStagingPanel({ tenantSlug }: Props) {
                 className="text-sm text-purple-600 hover:underline"
                 disabled={analyzingId === doc.id}
               >
-                {analyzingId === doc.id ? "Analyzing…" : "Analyze Metadata"}
+                {analyzingId === doc.id ? "Analyzing…" : "Analyze"}
+              </button>
+              <button
+                onClick={() => handleArchive(doc.id)}
+                className="text-sm text-gray-700 hover:underline flex items-center gap-1"
+              >
+                <Archive className="w-4 h-4" /> Archive
+              </button>
+              <button
+                onClick={() => handleDelete(doc.id, doc.storage_path)}
+                className="text-sm text-red-600 hover:underline flex items-center gap-1"
+              >
+                <Trash2 className="w-4 h-4" /> Delete
               </button>
             </div>
           </li>
