@@ -1,7 +1,6 @@
 // app/admin/documents/page.tsx
 import { loadTenantContext } from "@/lib/loadTenantContext";
-import DocumentUploadPanel from "@/components/DocumentUploadPanel";
-import DocumentStagingPanel from "@/components/DocumentStagingPanel";
+import AdminDocumentsClientPage from "@/components/AdminDocumentsClientPage";
 
 export default async function AdminDocumentsPage() {
   const { tenant, user, role, error } = await loadTenantContext();
@@ -14,9 +13,7 @@ export default async function AdminDocumentsPage() {
     );
   }
 
-  const isAdmin = role === "admin";
-
-  if (!isAdmin) {
+  if (role !== "admin") {
     return (
       <main className="p-10 text-center text-red-600">
         You do not have permission to view this page.
@@ -24,13 +21,5 @@ export default async function AdminDocumentsPage() {
     );
   }
 
-  return (
-    <main className="p-10">
-      <h1 className="text-3xl font-semibold mb-6">Manage Documents</h1>
-
-      <DocumentUploadPanel tenantSlug={tenant.slug} />
-      <hr className="my-6" />
-      <DocumentStagingPanel tenantSlug={tenant.slug} />
-    </main>
-  );
+  return <AdminDocumentsClientPage tenantSlug={tenant.slug} />;
 }
