@@ -2,7 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
-import { FileText, Trash2, Archive, Loader2 } from "lucide-react";
+import {
+  File,
+  FilePdf,
+  FileDoc,
+  FileXls,
+  FileImage,
+  FileZip,
+  FileAudio,
+  FileVideo,
+  FileText,
+  Trash,
+  Spinner,
+} from "phosphor-react";
 
 interface DocumentRow {
   id: string;
@@ -14,6 +26,7 @@ interface DocumentRow {
   tags: string[] | null;
   is_archived: boolean;
   is_analyzed: boolean;
+  file_type: string | null;
 }
 
 interface Props {
@@ -21,10 +34,86 @@ interface Props {
   version: number;
 }
 
+function getFileIcon(fileType?: string) {
+  if (!fileType) {
+    return (
+      <span title="Unknown file type">
+        <File size={20} weight="regular" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  const type = fileType.toLowerCase();
+
+  if (type.includes("pdf")) {
+    return (
+      <span title="PDF Document">
+        <FilePdf size={20} weight="duotone" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  if (type.includes("word") || type.includes("doc")) {
+    return (
+      <span title="Word Document">
+        <FileDoc size={20} weight="duotone" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  if (type.includes("xls") || type.includes("sheet") || type.includes("csv")) {
+    return (
+      <span title="Spreadsheet">
+        <FileXls size={20} weight="duotone" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  if (type.includes("image")) {
+    return (
+      <span title="Image File">
+        <FileImage size={20} weight="duotone" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  if (type.includes("zip") || type.includes("archive")) {
+    return (
+      <span title="Compressed Archive">
+        <FileZip size={20} weight="duotone" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  if (type.includes("audio")) {
+    return (
+      <span title="Audio File">
+        <FileAudio size={20} weight="duotone" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  if (type.includes("video")) {
+    return (
+      <span title="Video File">
+        <FileVideo size={20} weight="duotone" className="text-gray-700" />
+      </span>
+    );
+  }
+
+  return (
+    <span title="Generic Document">
+      <FileText size={20} weight="regular" className="text-gray-700" />
+    </span>
+  );
+}
+
 export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
   const supabase = createClient();
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingInProgress, setDeletingInProgress] = useState(false);
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -32,7 +121,7 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
       const { data, error } = await supabase
         .from("documents")
         .select(
-          "id, title, filename, storage_path, uploaded_at, doc_type, tags, is_archived, is_analyzed"
+          "id, title, filename, file_type, storage_path, uploaded_at, doc_type, tags, is_archived, is_analyzed"
         )
         .eq("is_published", false)
         .eq("is_archived", false)
@@ -51,26 +140,8 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
     fetchDocuments();
   }, [tenantSlug, version]);
 
-  const handleArchive = async (documentId: string) => {
-    const { error } = await supabase
-      .from("documents")
-      .update({ is_archived: true })
-      .eq("id", documentId);
-
-    if (error) {
-      console.error("❌ Failed to archive document:", error.message);
-      alert("Failed to archive document.");
-      return;
-    }
-
-    setDocuments((docs) => docs.filter((doc) => doc.id !== documentId));
-  };
-
   const handleDelete = async (documentId: string, storagePath: string) => {
-    const confirmed = confirm(
-      "Are you sure you want to permanently delete this document?"
-    );
-    if (!confirmed) return;
+    setDeletingInProgress(true);
 
     const { error: storageError } = await supabase.storage
       .from(`${tenantSlug}-uploads`)
@@ -82,6 +153,7 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
         storageError.message
       );
       alert("Failed to delete file from storage.");
+      setDeletingInProgress(false);
       return;
     }
 
@@ -93,10 +165,13 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
     if (dbError) {
       console.error("❌ Failed to delete metadata row:", dbError.message);
       alert("Deleted file but failed to delete metadata row.");
+      setDeletingInProgress(false);
       return;
     }
 
     setDocuments((docs) => docs.filter((doc) => doc.id !== documentId));
+    setDeletingId(null);
+    setDeletingInProgress(false);
   };
 
   if (loading) {
@@ -118,72 +193,93 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
   return (
     <div className="mt-10">
       <h2 className="text-xl font-semibold mb-4">Unpublished Documents</h2>
-      <ul className="space-y-3">
+
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))] justify-start">
         {documents.map((doc) => {
           const isPending = !doc.is_analyzed;
+          const isConfirmingDelete = deletingId === doc.id;
 
           return (
-            <li
+            <div
               key={doc.id}
-              className={`border p-4 rounded shadow-sm bg-white grid grid-cols-1 md:grid-cols-3 gap-4 items-start ${
+              className={`border p-4 rounded shadow-sm bg-white w-full max-w-[300px] flex flex-col justify-between h-[190px] ${
                 isPending ? "opacity-60 pointer-events-none" : ""
               }`}
             >
-              {/* Column 1: File name */}
-              <div className="flex items-start gap-2">
-                <FileText className="text-gray-400 w-4 h-4 mt-1" />
-                <div className="truncate text-sm text-gray-900 font-medium">
+              <div className="flex items-start gap-2 mb-2">
+                {getFileIcon(doc.file_type || undefined)}
+                <div className="flex flex-col">
                   <span
-                    title={doc.title || doc.filename}
-                    className="truncate block max-w-[250px]"
+                    title={doc.filename}
+                    className="text-sm text-gray-900 font-medium whitespace-normal break-words leading-snug"
                   >
                     {doc.title || doc.filename}
                   </span>
+                  {doc.doc_type && (
+                    <span
+                      title={`Document type: ${doc.doc_type}`}
+                      className="mt-1 inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-xs font-medium w-fit"
+                    >
+                      {doc.doc_type}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Column 2: Metadata or analyzing message */}
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 mt-auto">
                 {isPending ? (
                   <span className="italic text-gray-500 flex items-center gap-1">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Spinner className="w-4 h-4 animate-spin" />
                     Reviewing and categorizing automatically…
                   </span>
+                ) : isConfirmingDelete ? (
+                  <div className="text-sm mt-2 space-y-2">
+                    <p className="text-gray-700">
+                      Are you sure you want to delete this file?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setDeletingId(null)}
+                        className="text-sm px-3 py-1 border rounded text-gray-700 hover:bg-gray-100"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleDelete(doc.id, doc.storage_path)}
+                        disabled={deletingInProgress}
+                        className={`text-sm px-3 py-1 rounded transition text-white ${
+                          deletingInProgress
+                            ? "bg-red-400 cursor-not-allowed"
+                            : "bg-red-600 hover:bg-red-700"
+                        }`}
+                      >
+                        {deletingInProgress ? (
+                          <span className="flex items-center gap-1">
+                            <Spinner className="w-4 h-4 animate-spin" />
+                            Deleting...
+                          </span>
+                        ) : (
+                          "Delete"
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
-                    <br />
-                    Type: {doc.doc_type || "unspecified"}
-                    {doc.tags?.length ? (
-                      <>
-                        <br />
-                        Tags: {doc.tags.join(", ")}
-                      </>
-                    ) : null}
-                  </>
+                  <div className="flex gap-3 mt-2">
+                    <button
+                      onClick={() => setDeletingId(doc.id)}
+                      title="Delete"
+                      className="text-red-600 hover:text-red-800 transition"
+                    >
+                      <Trash className="w-5 h-5" weight="regular" />
+                    </button>
+                  </div>
                 )}
               </div>
-
-              {/* Column 3: Actions */}
-              <div className="flex flex-col items-start md:items-end gap-2">
-                <button
-                  onClick={() => handleArchive(doc.id)}
-                  className="text-sm text-gray-700 hover:underline flex items-center gap-1"
-                >
-                  <Archive className="w-4 h-4" /> Archive
-                </button>
-
-                <button
-                  onClick={() => handleDelete(doc.id, doc.storage_path)}
-                  className="text-sm text-red-600 hover:underline flex items-center gap-1"
-                >
-                  <Trash2 className="w-4 h-4" /> Delete
-                </button>
-              </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }
