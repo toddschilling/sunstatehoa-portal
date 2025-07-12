@@ -46,7 +46,6 @@ export default function DocumentUploadPanel({
     for (const file of files) {
       setUploads((prev) => [...prev, { name: file.name, status: "uploading" }]);
 
-      // 1. Upload file to storage
       const { error: uploadError } = await supabase.storage
         .from(`${tenantSlug}-uploads`)
         .upload(file.name, file, { upsert: true });
@@ -66,7 +65,6 @@ export default function DocumentUploadPanel({
         continue;
       }
 
-      // 2. Insert metadata row into `documents`
       const { data: insertData, error: insertError } = await supabase
         .from("documents")
         .insert([
@@ -80,7 +78,7 @@ export default function DocumentUploadPanel({
             is_public: false,
             is_published: false,
             is_archived: false,
-            is_analyzed: false, // new field
+            is_analyzed: false,
             doc_type: "other",
           },
         ])
@@ -106,7 +104,6 @@ export default function DocumentUploadPanel({
         continue;
       }
 
-      // 3. Trigger analysis API
       await fetch("/api/analyze-document", {
         method: "POST",
         body: JSON.stringify({
@@ -117,14 +114,12 @@ export default function DocumentUploadPanel({
         headers: { "Content-Type": "application/json" },
       });
 
-      // 4. Mark upload success
       setUploads((prev) =>
         prev.map((u) =>
           u.name === file.name ? { ...u, status: "success" } : u
         )
       );
 
-      // 5. Auto-remove from status panel
       setTimeout(() => {
         setUploads((prev) => prev.filter((u) => u.name !== file.name));
       }, 1000);
@@ -145,35 +140,39 @@ export default function DocumentUploadPanel({
   });
 
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      {/* Drop Zone */}
+    <div className="border rounded bg-gray-50 p-6 min-h-[8rem] flex flex-col sm:flex-row gap-6">
+      {/* Drop Area */}
       <div
         {...getRootProps()}
-        className={`flex-1 border-2 border-dashed rounded-lg p-6 text-center transition cursor-pointer ${
-          isDragActive ? "bg-blue-50 border-blue-400" : "bg-gray-50"
+        className={`flex-1 border-2 border-dashed rounded-lg p-6 flex items-center justify-center text-center cursor-pointer transition ${
+          isDragActive ? "bg-blue-50 border-blue-400" : "border-gray-300"
         }`}
       >
         <input {...getInputProps()} />
-        <p className="text-gray-600">
+        <p className="text-gray-600 text-sm">
           Drag and drop files here or click to select
         </p>
       </div>
 
       {/* Upload Status */}
-      <div className="flex-1 border rounded-lg p-4 bg-white shadow-sm">
-        <h3 className="text-sm font-semibold mb-2">Upload Status</h3>
+      <div className="w-full sm:w-64 flex flex-col justify-center">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">
+          Upload Status
+        </h4>
         {uploads.length === 0 ? (
           <p className="text-sm text-gray-500 italic">
             No uploads in progress.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-2 text-sm">
             {uploads.map((upload) => (
               <li
                 key={upload.name}
-                className="flex items-center justify-between text-sm"
+                className="flex items-center justify-between gap-2"
               >
-                <span>{upload.name}</span>
+                <span className="truncate" title={upload.name}>
+                  {upload.name}
+                </span>
                 {upload.status === "uploading" && (
                   <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
                 )}

@@ -126,8 +126,6 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
         .select(
           "id, title, filename, file_type, storage_path, uploaded_at, doc_type, description, is_archived, is_analyzed, document_year"
         )
-        .eq("is_published", false)
-        .eq("is_archived", false)
         .order("uploaded_at", { ascending: false });
 
       if (error) {
@@ -193,24 +191,20 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
 
   if (loading) {
     return (
-      <p className="text-sm text-gray-500 text-center">
-        Loading unpublished documents…
-      </p>
+      <p className="text-sm text-gray-500 text-center">Loading documents…</p>
     );
   }
 
   if (documents.length === 0) {
     return (
       <p className="text-sm text-gray-600 text-center mt-4">
-        No unpublished documents found.
+        No documents found.
       </p>
     );
   }
 
   return (
     <div className="mt-10">
-      <h2 className="text-xl font-semibold mb-4">Unpublished Documents</h2>
-
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))] justify-start">
         {documents.map((doc) => {
           const isPending = !doc.is_analyzed;

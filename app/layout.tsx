@@ -1,10 +1,9 @@
 import { loadTenantContext } from "@/lib/loadTenantContext";
 import "./globals.css";
 import { Inter } from "next/font/google";
-import LogoutButton from '@/components/LogoutButton';
+import LogoutButton from "@/components/LogoutButton";
 
 const inter = Inter({ subsets: ["latin"] });
-
 
 export default function RootLayout({
   children,
@@ -36,26 +35,18 @@ async function Navbar() {
   }
 
   return (
-    <header className="bg-white shadow sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <a href="/" className="flex items-center gap-2">
-          <img
-            src="/logo.png"
-            alt="Sun State HOA"
-            className="h-10 w-auto"
-          />
-          <span className="text-xl font-semibold text-gray-800">
-            {tenant.name}
-          </span>
-        </a>
-        <nav className="hidden md:flex items-center space-x-6 text-gray-600">
-          {user?.email && (
-            <>
-              <span className="text-sm text-gray-700">{user.email}</span>
-              <LogoutButton className="ml-4 text-sm text-red-600 hover:underline" />
-            </>
-          )}
-        </nav>
+    <header className="w-full bg-white shadow">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="Logo" className="h-6 w-6" />
+          <span className="text-lg font-semibold text-gray-800">Local HOA</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-600">admin@sunstatehoa.com</span>
+          <a href="/logout" className="text-sm text-red-600 hover:underline">
+            Logout
+          </a>
+        </div>
       </div>
     </header>
   );
@@ -65,10 +56,16 @@ function Footer() {
   return (
     <footer className="bg-white border-t text-sm text-gray-500">
       <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
-        <p>&copy; {new Date().getFullYear()} Sun State HOA. All rights reserved.</p>
+        <p>
+          &copy; {new Date().getFullYear()} Sun State HOA. All rights reserved.
+        </p>
         <div className="flex space-x-4">
-          <a href="/privacy" className="hover:text-gray-700">Privacy</a>
-          <a href="/terms" className="hover:text-gray-700">Terms</a>
+          <a href="/privacy" className="hover:text-gray-700">
+            Privacy
+          </a>
+          <a href="/terms" className="hover:text-gray-700">
+            Terms
+          </a>
         </div>
       </div>
     </footer>

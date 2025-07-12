@@ -1,6 +1,6 @@
 // app/admin/documents/page.tsx
 import { loadTenantContext } from "@/lib/loadTenantContext";
-import AdminDocumentsClientPage from "@/components/AdminDocumentsClientPage";
+import DocumentsPage from "@/components/DocumentsPage"; // now a client component
 
 export default async function AdminDocumentsPage() {
   const { tenant, user, role, error } = await loadTenantContext();
@@ -21,5 +21,5 @@ export default async function AdminDocumentsPage() {
     );
   }
 
-  return <AdminDocumentsClientPage tenantSlug={tenant.slug} />;
+  return <DocumentsPage tenantSlug={tenant.slug} />;
 }
