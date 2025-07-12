@@ -35,17 +35,21 @@ async function Navbar() {
   }
 
   return (
-    <header className="w-full bg-white shadow">
+    <header className="w-full bg-white shadow sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <a href="/" className="flex items-center gap-2 hover:opacity-80">
           <img src="/logo.png" alt="Logo" className="h-6 w-6" />
-          <span className="text-lg font-semibold text-gray-800">Local HOA</span>
-        </div>
+          <span className="text-lg font-semibold text-gray-800">
+            {tenant.name}
+          </span>
+        </a>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">admin@sunstatehoa.com</span>
-          <a href="/logout" className="text-sm text-red-600 hover:underline">
-            Logout
-          </a>
+          {user?.email && (
+            <>
+              <span className="text-sm text-gray-600">{user.email}</span>
+              <LogoutButton className="text-sm text-red-600 hover:underline" />
+            </>
+          )}
         </div>
       </div>
     </header>

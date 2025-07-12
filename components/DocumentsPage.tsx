@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import DocumentUploadPanel from "@/components/DocumentUploadPanel";
-import DocumentStagingPanel from "@/components/DocumentStagingPanel";
+import DocumentViewPanel from "@/components/DocumentViewPanel";
 import FilterBar from "@/components/FilterBar";
 
 interface Props {
@@ -23,7 +23,7 @@ export default function DocumentsPage({ tenantSlug }: Props) {
         />
       </div>
       <div className="mt-10">
-        <DocumentStagingPanel tenantSlug={tenantSlug} version={version} />
+        <DocumentViewPanel tenantSlug={tenantSlug} version={version} />
       </div>
     </div>
   );

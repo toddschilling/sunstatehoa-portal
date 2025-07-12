@@ -110,7 +110,7 @@ function getFileIcon(fileType?: string | null) {
   );
 }
 
-export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
+export default function DocumentViewPanel({ tenantSlug, version }: Props) {
   const supabase = createClient();
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,7 +205,9 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
 
   return (
     <div className="mt-10">
-      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))] justify-start">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
+        {" "}
+        {/* ✅ tighter layout */}
         {documents.map((doc) => {
           const isPending = !doc.is_analyzed;
           const isConfirmingDelete = deletingId === doc.id;
@@ -213,7 +215,7 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
           return (
             <div
               key={doc.id}
-              className={`border p-4 rounded shadow-sm bg-white w-full max-w-[300px] flex flex-col justify-between h-auto ${
+              className={`border p-4 rounded shadow-sm bg-white w-full flex flex-col justify-between h-auto ${
                 isPending ? "opacity-60 pointer-events-none" : ""
               }`}
             >
