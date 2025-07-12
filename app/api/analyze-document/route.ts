@@ -36,18 +36,33 @@ You are an HOA assistant AI. Given the contents of the document at the provided 
 Respond with ONLY the JSON object, no other text:
 {
   "title": "...",
-  "tags": ["...", "..."],
   "doc_type": "...",
   "description": "...",
   "doc_year": 2025
 }
 
 Notes:
-- title: a short, human-friendly title
-- tags: 3–5 relevant keywords
-- doc_type: one of [bylaws, declaration, articles, rules, budget, financials, minutes, notices, contracts, insurance, other]
-- description: a one-sentence summary
-- doc_year: the year this document pertains to (from the title, content, or metadata); use a 4-digit year or null
+- title: a short, human-readable title (e.g. "2025 Reserve Study", "Board Meeting Minutes – March 2024")
+- doc_type: one of the following HOA categories:
+  - bylaws: community bylaws and governance rules
+  - declaration: covenants, conditions, and restrictions (CC&Rs)
+  - articles: articles of incorporation or legal filings
+  - rules: rules and regulations (e.g., pool rules, parking)
+  - budget: annual or proposed budget summaries
+  - financials: financial statements, audits, reserve studies, balance sheets, or spending reports
+  - minutes: meeting minutes from board or committee meetings
+  - notices: public notices, violation letters, announcements, elections
+  - contracts: signed service agreements or proposals
+  - insurance: proof of insurance or related policies
+  - other: only use if the document does not fit any of the above categories
+
+Examples:
+- A document titled "2025 Reserve Study" or "Reserve Funding Analysis" → doc_type = "financials"
+- A document titled "2025 Budget Overview" → doc_type = "budget"
+- A document with board decisions from a meeting → doc_type = "minutes"
+
+- description: a single-sentence summary of the document's purpose or contents
+- doc_year: the year this document pertains to (typically found in the title or first page); return a 4-digit number or null if not clearly stated
 
 Document URL: ${signedUrlData.signedUrl}
 `;
@@ -70,7 +85,6 @@ Document URL: ${signedUrlData.signedUrl}
 
   let metadata: {
     title?: string;
-    tags?: string[];
     doc_type?: string;
     description?: string;
     doc_year?: number;
@@ -91,7 +105,6 @@ Document URL: ${signedUrlData.signedUrl}
     .from("documents")
     .update({
       title: metadata.title ?? fileName,
-      tags: metadata.tags ?? [],
       doc_type: metadata.doc_type ?? "other",
       description: metadata.description ?? "",
       document_year: metadata.doc_year ?? null,

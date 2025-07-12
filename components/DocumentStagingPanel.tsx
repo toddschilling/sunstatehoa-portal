@@ -14,6 +14,7 @@ import {
   FileText,
   Trash,
   Spinner,
+  Eye,
 } from "phosphor-react";
 
 interface DocumentRow {
@@ -23,10 +24,11 @@ interface DocumentRow {
   storage_path: string;
   uploaded_at: string;
   doc_type: string;
-  tags: string[] | null;
+  description: string | null;
   is_archived: boolean;
   is_analyzed: boolean;
   file_type: string | null;
+  document_year: number | null;
 }
 
 interface Props {
@@ -34,7 +36,7 @@ interface Props {
   version: number;
 }
 
-function getFileIcon(fileType?: string) {
+function getFileIcon(fileType?: string | null) {
   if (!fileType) {
     return (
       <span title="Unknown file type">
@@ -114,6 +116,7 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingInProgress, setDeletingInProgress] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -121,7 +124,7 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
       const { data, error } = await supabase
         .from("documents")
         .select(
-          "id, title, filename, file_type, storage_path, uploaded_at, doc_type, tags, is_archived, is_analyzed"
+          "id, title, filename, file_type, storage_path, uploaded_at, doc_type, description, is_archived, is_analyzed, document_year"
         )
         .eq("is_published", false)
         .eq("is_archived", false)
@@ -132,9 +135,23 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
         setDocuments([]);
       } else {
         setDocuments(data || []);
+        generatePreviewLinks(data || []);
       }
 
       setLoading(false);
+    };
+
+    const generatePreviewLinks = async (docs: DocumentRow[]) => {
+      const newUrls: Record<string, string> = {};
+      for (const doc of docs) {
+        const { data } = await supabase.storage
+          .from(`${tenantSlug}-uploads`)
+          .createSignedUrl(doc.storage_path, 300);
+        if (data?.signedUrl) {
+          newUrls[doc.id] = data.signedUrl;
+        }
+      }
+      setPreviewUrls(newUrls);
     };
 
     fetchDocuments();
@@ -202,7 +219,7 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
           return (
             <div
               key={doc.id}
-              className={`border p-4 rounded shadow-sm bg-white w-full max-w-[300px] flex flex-col justify-between h-[190px] ${
+              className={`border p-4 rounded shadow-sm bg-white w-full max-w-[300px] flex flex-col justify-between h-auto ${
                 isPending ? "opacity-60 pointer-events-none" : ""
               }`}
             >
@@ -215,12 +232,16 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
                   >
                     {doc.title || doc.filename}
                   </span>
+
                   {doc.doc_type && (
-                    <span
-                      title={`Document type: ${doc.doc_type}`}
-                      className="mt-1 inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-xs font-medium w-fit"
-                    >
+                    <span className="mt-1 inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-xs font-medium w-fit">
                       {doc.doc_type}
+                    </span>
+                  )}
+
+                  {doc.document_year && (
+                    <span className="mt-1 inline-block bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs w-fit">
+                      {doc.document_year}
                     </span>
                   )}
                 </div>
@@ -265,7 +286,16 @@ export default function DocumentStagingPanel({ tenantSlug, version }: Props) {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-3 mt-2">
+                  <div className="flex gap-3 mt-3">
+                    <a
+                      href={previewUrls[doc.id]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Preview"
+                      className="text-blue-600 hover:text-blue-800 transition"
+                    >
+                      <Eye className="w-5 h-5" weight="regular" />
+                    </a>
                     <button
                       onClick={() => setDeletingId(doc.id)}
                       title="Delete"
