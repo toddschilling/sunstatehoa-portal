@@ -1,27 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function FilterBar() {
-  const [search, setSearch] = useState("");
-  const [year, setYear] = useState("");
-  const [docType, setDocType] = useState("");
-  const [published, setPublished] = useState("");
-  const [archived, setArchived] = useState("");
+export interface FilterState {
+  search?: string;
+  year?: string;
+  docType?: string;
+  published?: string;
+  archived?: string;
+  visibility?: string;
+}
+
+interface Props {
+  filters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
+}
+
+export default function FilterBar({ filters, onFiltersChange }: Props) {
+  const [localFilters, setLocalFilters] = useState<FilterState>(filters);
+
+  useEffect(() => {
+    onFiltersChange(localFilters);
+  }, [localFilters]);
 
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <input
         type="text"
         placeholder="Search by title"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        value={localFilters.search || ""}
+        onChange={(e) =>
+          setLocalFilters({ ...localFilters, search: e.target.value })
+        }
         className="border px-3 py-2 rounded w-64 text-sm"
       />
 
       <select
-        value={year}
-        onChange={(e) => setYear(e.target.value)}
+        value={localFilters.year || ""}
+        onChange={(e) =>
+          setLocalFilters({ ...localFilters, year: e.target.value })
+        }
         className="border px-3 py-2 rounded text-sm"
       >
         <option value="">All Years</option>
@@ -36,8 +54,10 @@ export default function FilterBar() {
       </select>
 
       <select
-        value={docType}
-        onChange={(e) => setDocType(e.target.value)}
+        value={localFilters.docType || ""}
+        onChange={(e) =>
+          setLocalFilters({ ...localFilters, docType: e.target.value })
+        }
         className="border px-3 py-2 rounded text-sm"
       >
         <option value="">All Types</option>
@@ -61,8 +81,10 @@ export default function FilterBar() {
       </select>
 
       <select
-        value={published}
-        onChange={(e) => setPublished(e.target.value)}
+        value={localFilters.published || ""}
+        onChange={(e) =>
+          setLocalFilters({ ...localFilters, published: e.target.value })
+        }
         className="border px-3 py-2 rounded text-sm"
       >
         <option value="">All Statuses</option>
@@ -71,13 +93,27 @@ export default function FilterBar() {
       </select>
 
       <select
-        value={archived}
-        onChange={(e) => setArchived(e.target.value)}
+        value={localFilters.archived || ""}
+        onChange={(e) =>
+          setLocalFilters({ ...localFilters, archived: e.target.value })
+        }
         className="border px-3 py-2 rounded text-sm"
       >
         <option value="">All</option>
         <option value="false">Active</option>
         <option value="true">Archived</option>
+      </select>
+
+      <select
+        value={localFilters.visibility || ""}
+        onChange={(e) =>
+          setLocalFilters({ ...localFilters, visibility: e.target.value })
+        }
+        className="border px-3 py-2 rounded text-sm"
+      >
+        <option value="">All Visibility</option>
+        <option value="public">Public</option>
+        <option value="private">Members only</option>
       </select>
     </div>
   );

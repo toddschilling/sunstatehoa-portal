@@ -140,7 +140,7 @@ export default function DocumentUploadPanel({
   });
 
   return (
-    <div className="border rounded bg-gray-50 p-6 min-h-[8rem] flex flex-col sm:flex-row gap-6">
+    <div className="border rounded bg-gray-50 p-6 min-h-[12rem] flex flex-col sm:flex-row gap-6">
       {/* Drop Area */}
       <div
         {...getRootProps()}
